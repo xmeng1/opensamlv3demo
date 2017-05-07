@@ -1,0 +1,65 @@
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.xml.BasicParserPool;
+import net.shibboleth.utilities.java.support.xml.XMLParserException;
+import org.apache.xml.security.exceptions.Base64DecodingException;
+import org.apache.xml.security.utils.Base64;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.Unmarshaller;
+import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.saml.common.SAMLObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
+/**
+ * User:    Xin Meng
+ * Date:    07/05/17
+ * Project: opensamlv3demo
+ *
+ *
+ PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c2FtbHA6QXV0aG5SZXF1ZXN0IHhtbG5zOnNhbWxwPSJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6cHJvdG9jb2wiIEFzc2VydGlvbkNvbnN1bWVyU2VydmljZVVSTD0iaHR0cHM6Ly9kZWVwbmV0LWRldi1lZC5teS5zYWxlc2ZvcmNlLmNvbT9zbz0wMEQwWTAwMDAwMWY3S2oiIERlc3RpbmF0aW9uPSJodHRwczovL2R1YWxzaGllbGQtY2xvdWQuZGVlcG5ldHNlY3VyaXR5LmxvY2FsL3Jlc3Qvc2FtbC9zc28vYXBwL3R1bEQzVmhrcyIgSUQ9Il8yQ0FBQUFWeDFMT19aTUU4d01Ga3dNREF3TURBMFF6a3pBQUFBemkteXIyWldwTGRUUnJlRUhVcjE4aGRMTm5yaWRmeHY4dXJzbVo2R2twcjFKSFZydmQ5bGllVDVLdXZobjh2LU1FMXpsOGdEYWhDQmhjb3hEb3hFakRjczBFXzlIelFXNUVma05yVjZYOEtUb2xXVEQ5ZnB3T0hGX0Qta056RzRONExSaVRNRlZoN2s4eWU5TkQ0WkZqQzYtdWhwaHdhSVBBM1gxTV80dWRhSTJIOGlsYmt1eVZjUFZNdlJhTVg5OE9sVUFWNG5YbjNJVDFJMFRHSjRvaTA3bHZlV3h4RVJ3dmtSS2dmamVZMTU3UjJDMEY1OS1rcXFRa1hVUlRINlhnIiBJc3N1ZUluc3RhbnQ9IjIwMTctMDUtMDdUMjI6MTU6MDMuMzg4WiIgUHJvdG9jb2xCaW5kaW5nPSJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YmluZGluZ3M6SFRUUC1QT1NUIiBWZXJzaW9uPSIyLjAiPjxzYW1sOklzc3VlciB4bWxuczpzYW1sPSJ1cm46b2FzaXM6bmFtZXM6dGM6U0FNTDoyLjA6YXNzZXJ0aW9uIj5odHRwczovL3NhbWwuc2FsZXNmb3JjZS5jb208L3NhbWw6SXNzdWVyPjxkczpTaWduYXR1cmUgeG1sbnM6ZHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyMiPgo8ZHM6U2lnbmVkSW5mbz4KPGRzOkNhbm9uaWNhbGl6YXRpb25NZXRob2QgQWxnb3JpdGhtPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzEwL3htbC1leGMtYzE0biMiLz4KPGRzOlNpZ25hdHVyZU1ldGhvZCBBbGdvcml0aG09Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyNyc2Etc2hhMSIvPgo8ZHM6UmVmZXJlbmNlIFVSST0iI18yQ0FBQUFWeDFMT19aTUU4d01Ga3dNREF3TURBMFF6a3pBQUFBemkteXIyWldwTGRUUnJlRUhVcjE4aGRMTm5yaWRmeHY4dXJzbVo2R2twcjFKSFZydmQ5bGllVDVLdXZobjh2LU1FMXpsOGdEYWhDQmhjb3hEb3hFakRjczBFXzlIelFXNUVma05yVjZYOEtUb2xXVEQ5ZnB3T0hGX0Qta056RzRONExSaVRNRlZoN2s4eWU5TkQ0WkZqQzYtdWhwaHdhSVBBM1gxTV80dWRhSTJIOGlsYmt1eVZjUFZNdlJhTVg5OE9sVUFWNG5YbjNJVDFJMFRHSjRvaTA3bHZlV3h4RVJ3dmtSS2dmamVZMTU3UjJDMEY1OS1rcXFRa1hVUlRINlhnIj4KPGRzOlRyYW5zZm9ybXM+CjxkczpUcmFuc2Zvcm0gQWxnb3JpdGhtPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwLzA5L3htbGRzaWcjZW52ZWxvcGVkLXNpZ25hdHVyZSIvPgo8ZHM6VHJhbnNmb3JtIEFsZ29yaXRobT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS8xMC94bWwtZXhjLWMxNG4jIj48ZWM6SW5jbHVzaXZlTmFtZXNwYWNlcyB4bWxuczplYz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS8xMC94bWwtZXhjLWMxNG4jIiBQcmVmaXhMaXN0PSJkcyBzYW1sIHNhbWxwIi8+PC9kczpUcmFuc2Zvcm0+CjwvZHM6VHJhbnNmb3Jtcz4KPGRzOkRpZ2VzdE1ldGhvZCBBbGdvcml0aG09Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyNzaGExIi8+CjxkczpEaWdlc3RWYWx1ZT5NN2NYNjlHbkZmNmh1cVg1aEs4d2xFVXRQQlU9PC9kczpEaWdlc3RWYWx1ZT4KPC9kczpSZWZlcmVuY2U+CjwvZHM6U2lnbmVkSW5mbz4KPGRzOlNpZ25hdHVyZVZhbHVlPgpheGVhajBSVWYwWHF6Zm9Dbll5Q2VZa0prTVN3Qk1TZW83V25UcXhrOXh4L0FZTHVKTUozZTA5UDNLbVo3WERYSTFsRnprVWh6a2lQCmEvYlFrNkE5THVzN1htblVKQURSWTh5dEo3SUpqTmpWZXZpRzFVYjZ6Qm5nVmFTMi9qWS84TytpelMvUTdyZXRyS3kyN1ZWZG9HREEKTjBFY1ppNFp6TzFlaWFHQ1pxVTFQakVMNHg4cGQwZzZidUJycGNCa3VDQWYxNGdBUEM3eUNXM3UxamRuYVhqNFFvWG9NWlVsUDM0ZAp2MnNITHZwNEtFZnVTOCt6NnRTSVpYalIxWnZERk5PaFBrVmJ3b3Z1WFNpNFg5SDFtTnBHaHZhTlVrazJYYVlZVWJwZ2luZ3Zkd0gwCnNjbnpsV0RhaVVuTHNqLy9GRDlralJBd2lBQnkyWmJGck41NWF3PT0KPC9kczpTaWduYXR1cmVWYWx1ZT4KPGRzOktleUluZm8+PGRzOlg1MDlEYXRhPjxkczpYNTA5Q2VydGlmaWNhdGU+TUlJRXJEQ0NBNVNnQXdJQkFnSU9BVnVMZDFGakFBQUFBQzRQN0trd0RRWUpLb1pJaHZjTkFRRUxCUUF3Z1pBeEtEQW1CZ05WQkFNTQpIMU5sYkdaVGFXZHVaV1JEWlhKMFh6SXdRWEJ5TWpBeE4xOHhNekExTURReEdEQVdCZ05WQkFzTUR6QXdSREJaTURBd01EQXhaamRMCmFqRVhNQlVHQTFVRUNnd09VMkZzWlhObWIzSmpaUzVqYjIweEZqQVVCZ05WQkFjTURWTmhiaUJHY21GdVkybHpZMjh4Q3pBSkJnTlYKQkFnTUFrTkJNUXd3Q2dZRFZRUUdFd05WVTBFd0hoY05NVGN3TkRJd01UTXdOVEEwV2hjTk1UZ3dOREl3TVRJd01EQXdXakNCa0RFbwpNQ1lHQTFVRUF3d2ZVMlZzWmxOcFoyNWxaRU5sY25SZk1qQkJjSEl5TURFM1h6RXpNRFV3TkRFWU1CWUdBMVVFQ3d3UE1EQkVNRmt3Ck1EQXdNREZtTjB0cU1SY3dGUVlEVlFRS0RBNVRZV3hsYzJadmNtTmxMbU52YlRFV01CUUdBMVVFQnd3TlUyRnVJRVp5WVc1amFYTmoKYnpFTE1Ba0dBMVVFQ0F3Q1EwRXhEREFLQmdOVkJBWVRBMVZUUVRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQwpnZ0VCQUtnOCtuNGgyNXpuNzdlVDhNSncvNXc3UW1aRmhVTFlMUkJlZ0pqS2x1M2tHUGxOVHR1dC9CNElFQVdkUHVacnFPV0ZHNWt3CnY3NnVJNXgzNThZSmpteXdJODlEQ1dMWXJpVk9BV3dub0VDdENJRDF0OVdJNEVCQmZ0VzhaN3RQTGovSEtqNzZCMENTaXVDVGY4Yk0KaDJrc1NYWWhCVWlMRThjbFlxd2M2Tm03WFBsYTJRa0FJOEJ2TWFiRGpaS2JPanFaWUFrOFl6dENOVUEzTGJESmhCMDVCTE5DSEFpWgo3Qm0yK005cUtkYXZUQW8rd3VlbnZTdlJEV1c2dFdxRUdnV2ZhWTZlaERnazlzOHhFeXl4VldWT0loaDFhczVUNjNnQ25nU1ZrOHNhCmRqWHF0YTIxcElHa050WGN3UTBFUTFjUTFXT2NQQU16RWxaa1JWQm9JNDBDQXdFQUFhT0NBUUF3Z2Ywd0hRWURWUjBPQkJZRUZKMzgKd0QwKzQvWnNVVElCb0VydEM1YnNhS3BXTUE4R0ExVWRFd0VCL3dRRk1BTUJBZjh3Z2NvR0ExVWRJd1NCd2pDQnY0QVVuZnpBUFQ3ago5bXhSTWdHZ1N1MExsdXhvcWxhaGdaYWtnWk13Z1pBeEtEQW1CZ05WQkFNTUgxTmxiR1pUYVdkdVpXUkRaWEowWHpJd1FYQnlNakF4Ck4xOHhNekExTURReEdEQVdCZ05WQkFzTUR6QXdSREJaTURBd01EQXhaamRMYWpFWE1CVUdBMVVFQ2d3T1UyRnNaWE5tYjNKalpTNWoKYjIweEZqQVVCZ05WQkFjTURWTmhiaUJHY21GdVkybHpZMjh4Q3pBSkJnTlZCQWdNQWtOQk1Rd3dDZ1lEVlFRR0V3TlZVMEdDRGdGYgppM2RSWXdBQUFBQXVEK3lwTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCdXpoR05sUDNEMDVOQzNRQS9nQ3VKUEovaDFYOVowTmdzCm5KdWErZm9XbFR4LzhBc2FWVDRzZGpJYkFHQ2dSL0JodnFJOUNQbFo4K09XajZwUi9mbVpUcjMrL3FGVVk2UnBYWG15ODBmWWJ3QncKWWl1NDFyeWJmMXEzV0JHZkMvK1NUdC9vcEZEQXZ0NEJEclU0c3VHQjZlaXZRb1lCN2ZyTGpWcGtTT2xrVDFKMmdQQWIwK0M1TEtoawpjcFBTaEpxVDkwb2VTanhLNk9sNExKbjZHaVYybHJVQUlzSCt3aGhzTmIrc25NWWFKTG50WEltekl6Tkp1eGRFWXR4SUxxc1FvRDhDCkN5NTdqZlp6ZHRMNDJJdTdsUml3SjRLNnZJUEV3a2l4OVNZZEpPZVRIZ21vWnVEN0lVOE5MWHB0UTNPY3M4UWV0T0ErK2R1Z1Y5ZmUKdHkxMDwvZHM6WDUwOUNlcnRpZmljYXRlPjwvZHM6WDUwOURhdGE+PC9kczpLZXlJbmZvPjwvZHM6U2lnbmF0dXJlPjwvc2FtbHA6QXV0aG5SZXF1ZXN0Pg==
+ */
+public class SAMLToolkit {
+
+    public static SAMLObject convertBase64ToSaml(String base64Str) {
+        byte[] decodedBytes = new byte[0];
+        try {
+            decodedBytes = Base64.decode(base64Str);
+        } catch (Base64DecodingException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        InputStream is = new ByteArrayInputStream(decodedBytes);
+        //is = new InflaterInputStream(is, new Inflater(true));
+        try {
+
+            InitializationService.initialize();
+            Document messageDoc;
+            BasicParserPool basicParserPool = new BasicParserPool();
+            basicParserPool.initialize();
+            messageDoc = basicParserPool.parse(is);
+            Element messageElem = messageDoc.getDocumentElement();
+            Unmarshaller unmarshaller = XMLObjectProviderRegistrySupport.getUnmarshallerFactory().getUnmarshaller(messageElem);
+
+            assert unmarshaller != null;
+            return(SAMLObject) unmarshaller.unmarshall(messageElem);
+        } catch (InitializationException e) {
+            e.printStackTrace();
+            return null;
+        } catch (XMLParserException e) {
+            e.printStackTrace();
+            return null;
+        } catch (UnmarshallingException e) {
+            e.printStackTrace();
+            return null;
+        } catch (ComponentInitializationException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}
